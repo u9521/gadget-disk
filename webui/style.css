@@ -1,0 +1,493 @@
+/* style.css —— 窄屏优先，适配安全区。
+ *
+ * 约束（docs/webui.md）：
+ * - 窄屏（手机）优先；布局适配安全区（insets）。
+ * - 交互元素触控目标不小于 44×44 dp。
+ * - 不使用仅靠颜色传达状态的方式（状态需有文字标注）。
+ */
+
+:root {
+  --bg: #f5f6f8;
+  --surface: #ffffff;
+  --text: #1a1c1e;
+  --text-dim: #5a5f66;
+  --border: #d8dce1;
+  --accent: #2f6fed;
+  --accent-text: #ffffff;
+  --danger: #b3261e;
+  --warn: #8a5300;
+  --ok: #1b6b3a;
+  --radius: 10px;
+  /* 触控目标下限 44dp */
+  --touch: 44px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #14161a;
+    --surface: #1e2126;
+    --text: #e6e8eb;
+    --text-dim: #a2a8b0;
+    --border: #343941;
+    --accent: #7aa5ff;
+    --accent-text: #10131a;
+    --danger: #ff9a91;
+    --warn: #ffcc80;
+    --ok: #8fd6a6;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+/* 安全区：顶部状态栏 + 底部导航手势区 */
+body {
+  padding: env(safe-area-inset-top) env(safe-area-inset-right)
+    env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 12px 16px;
+}
+
+header h1 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+header .subtitle {
+  margin: 2px 0 0;
+  color: var(--text-dim);
+  font-size: 0.85rem;
+}
+
+/* 视图切换：横向可滚动，触控目标够大 */
+nav.tabs {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  padding: 8px 12px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  -webkit-overflow-scrolling: touch;
+}
+
+nav.tabs button {
+  flex: 0 0 auto;
+  min-height: var(--touch);
+  padding: 0 14px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+nav.tabs button[aria-selected="true"] {
+  background: var(--accent);
+  color: var(--accent-text);
+  font-weight: 600;
+}
+
+main {
+  padding: 12px 16px 40px;
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+section[role="tabpanel"] {
+  display: none;
+}
+
+section[role="tabpanel"].active {
+  display: block;
+}
+
+section[role="tabpanel"] > h2 {
+  font-size: 1.05rem;
+  margin: 4px 0 12px;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+  margin-bottom: 12px;
+}
+
+.card h3 {
+  margin: 0 0 8px;
+  font-size: 0.95rem;
+  color: var(--text-dim);
+  font-weight: 600;
+}
+
+label {
+  display: block;
+  margin: 10px 0 4px;
+  font-size: 0.9rem;
+  color: var(--text-dim);
+}
+
+input[type="text"],
+input[type="number"],
+select {
+  width: 100%;
+  min-height: var(--touch);
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 1rem;
+}
+
+button.action {
+  min-height: var(--touch);
+  min-width: var(--touch);
+  padding: 0 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+button.action.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-text);
+  font-weight: 600;
+}
+
+button.action.danger {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+button.action:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.row > * {
+  flex: 1 1 auto;
+}
+
+.row.tight {
+  gap: 6px;
+}
+
+/* 状态徽标：始终带文字，不单靠颜色传达状态 */
+.tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+.tag.ok {
+  color: var(--ok);
+  border-color: var(--ok);
+}
+
+.tag.warn {
+  color: var(--warn);
+  border-color: var(--warn);
+}
+
+.tag.danger {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+dl.kv {
+  display: grid;
+  grid-template-columns: minmax(7em, auto) 1fr;
+  gap: 4px 12px;
+  margin: 8px 0 0;
+  font-size: 0.9rem;
+}
+
+dl.kv dt {
+  color: var(--text-dim);
+}
+
+dl.kv dd {
+  margin: 0;
+  word-break: break-all;
+}
+
+ul.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+ul.list li {
+  border-top: 1px solid var(--border);
+  padding: 10px 0;
+}
+
+ul.list li:first-child {
+  border-top: none;
+}
+
+ul.list li .title {
+  font-weight: 600;
+  word-break: break-all;
+}
+
+ul.list li .meta {
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  margin: 2px 0 6px;
+}
+
+/* 提示区：解释底层约束 */
+.hint {
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  border-left: 3px solid var(--accent);
+  padding: 8px 12px;
+  margin: 10px 0;
+  font-size: 0.88rem;
+  color: var(--text-dim);
+  border-radius: 0 var(--radius) var(--radius) 0;
+}
+
+.hint.warn {
+  background: color-mix(in srgb, var(--warn) 12%, transparent);
+  border-left-color: var(--warn);
+}
+
+/* 错误/日志面板 */
+.panel {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  margin-top: 10px;
+  font-size: 0.88rem;
+}
+
+.panel.error {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+/* 后端不可用横幅：持久显示直到恢复（不自动隐藏），与单次操作的错误面板分工不同 */
+.panel.offline {
+  border-color: var(--warn);
+  border-left-width: 4px;
+  color: var(--warn);
+  margin-bottom: 12px;
+}
+
+.panel.offline strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+/* 任务进行中状态行：始终有文字（不单靠颜色），空内容时不占位 */
+.task-status {
+  margin-top: 8px;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  min-height: 1.2em;
+}
+
+.task-status:empty {
+  display: none;
+}
+
+.task-status.slow {
+  color: var(--warn);
+}
+
+.panel pre {
+  margin: 6px 0 0;
+  padding: 8px;
+  background: var(--bg);
+  border-radius: 6px;
+  overflow-x: auto;
+  font-size: 0.8rem;
+  white-space: pre-wrap;
+  word-break: break-all;
+  color: var(--text);
+}
+
+/* 进度条：带文字百分比，不单靠颜色 */
+.progress {
+  height: 8px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+  margin: 6px 0 4px;
+}
+
+.progress > span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  width: 0;
+}
+
+.muted {
+  color: var(--text-dim);
+  font-size: 0.88rem;
+}
+
+/* 格式化来源是**多行**文本（每种文件系统一行，见 view-create.js 的
+   `renderFormattingSource`）。不在全局 `.muted` 上加 `pre-line`：那会让所有
+   提示里的源码缩进与换行都显形。 */
+#create-fs-source {
+  white-space: pre-line;
+}
+
+.empty {
+  color: var(--text-dim);
+  font-size: 0.9rem;
+  padding: 8px 0;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ---------------------------------------------------------------- 分区编辑器
+ *
+ * 每个分区是一个**两行结构**：标题行 + 字段网格。
+ *
+ * 早先用单层 flex + flex-wrap，所有子元素都是 `flex: 1 1 30%`。宽屏下浏览器
+ * 按可用宽度重新排列，于是「类型」这类标签被夹在两个控件中间（实际截图可见），
+ * 用户根本分不清标签属于哪个控件。
+ *
+ * 现在标签与控件处在同一个 `.field` 单元内（纵向排列），因此标签**必定**在
+ * 自己控件的上方，与可用宽度无关。字段网格用 `auto-fit` 自适应：
+ * 宽屏一行放下多个字段，窄屏自动堆叠成单列。 */
+
+.partition-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.partition-heading {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-dim);
+}
+
+/*
+ * 逻辑分区：左侧加一条竖线，视觉上表示其“位于扩展分区内部”。
+ * 扩展分区容器不占序号——用缩进与边框表达这层嵌套，
+ * 比只在文字里说明更容易一眼看懂。
+ */
+.partition-heading-logical {
+  border-left: 3px solid var(--accent, #4a9eff);
+  padding-left: 8px;
+  color: var(--text);
+}
+
+/*
+ * 扩展分区**容器**行：它不是分区（不占序号、不可挂载），因此不能长得像
+ * 一个普通分区行——用虚线上边框与略暗的标题区分，避免用户以为它有设备名。
+ */
+.partition-heading-extended {
+  color: var(--text);
+  border-top: 1px dashed var(--border);
+  padding-top: 6px;
+}
+
+/*
+ * 逻辑分区缩进分组：增加左边距并添加左边框，表达该组嵌套于扩展分区容器内部。
+ * 容器行本身保持顶格作为组标题。
+ */
+.partition-logical-group {
+  margin-left: 14px;
+  padding-left: 4px;
+  border-left: 2px solid var(--border);
+}
+
+/* 容器行的说明文字：与 .field 的其他单元同高，避免网格错位。 */
+.partition-container-hint > div {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  font-size: 0.85rem;
+}
+
+.partition-fields {
+  display: grid;
+  /* 最小 150px：窄屏自动变单列，宽屏一行排开多个字段。 */
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px;
+  align-items: end;
+}
+
+/* 字段单元：标签在上、控件在下，两者绑在一起移动。 */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0; /* 允许在窄列里收缩，避免长 GUID 撑破网格 */
+}
+
+.field > label {
+  margin: 0;
+  font-size: 0.82rem;
+}
+
+.field > input,
+.field > select {
+  min-height: 44px; /* docs/webui.md 的无障碍要求 */
+  min-width: 0;
+}
+
+/* 删除按钮独立一行，右对齐；宽度跟随内容，不被网格拉伸。 */
+.partition-remove {
+  align-self: flex-end;
+  min-height: 44px;
+}
+
+/* 同名冲突提示：始终带文字，不单靠颜色传达（与 .tag 同一原则）。 */
+.error {
+  color: var(--danger);
+  font-size: 0.88rem;
+  margin-top: 4px;
+}

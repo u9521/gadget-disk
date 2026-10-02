@@ -1,0 +1,16 @@
+[package]
+name = "gadgetdisk-loop"
+description = "loop ioctl、mount/umount、能力探测与释放顺序"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+gadgetdisk-proto.workspace = true
+libc.workspace = true
+rustix.workspace = true
+thiserror.workspace = true
+
+[lints]
+workspace = true

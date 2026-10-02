@@ -1,0 +1,6 @@
+id=gadget-disk
+name=GadgetDisk
+version=0.1.0
+versionCode=1
+author=u9521
+description=将手机模拟为 USB 大容量存储设备，支持本地 loop 挂载镜像与 WebUI 按需管理。/ Simulate USB Mass Storage on Android with local loop mount image and on-demand WebUI.

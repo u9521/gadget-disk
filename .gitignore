@@ -1,0 +1,17 @@
+/target/
+
+/.venv/
+/.ruff_cache/
+/.pyright/
+
+/.cargo/config.toml
+/local.properties
+/local/
+/uv.toml
+
+# 验证与临时产物
+/.probe/
+/.tmp/
+*.img
+__pycache__/
+*.pyc

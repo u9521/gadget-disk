@@ -1,0 +1,56 @@
+[workspace]
+resolver = "2"
+members = [
+  "crates/gadgetdisk-cli",
+  "crates/gadgetdisk-core",
+  "crates/gadgetdisk-gdd",
+  "crates/gadgetdisk-loop",
+  "crates/gadgetdisk-mkfsvfat",
+  "crates/gadgetdisk-proto",
+  "crates/gadgetdisk-usb",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.99"
+license = "GPL-3.0-only"
+
+[workspace.dependencies]
+fatfs = "0.3.6"
+fscommon = "0.1.1"
+gpt = "4.1.0"
+uuid = "1"
+
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+libc = "0.2"
+rustix = { version = "1.1", features = ["alloc", "fs", "mount", "process", "thread"] }
+
+anyhow = "1"
+clap = { version = "4", features = ["derive"] }
+thiserror = "2"
+
+gadgetdisk-core = { path = "crates/gadgetdisk-core" }
+gadgetdisk-gdd = { path = "crates/gadgetdisk-gdd" }
+gadgetdisk-loop = { path = "crates/gadgetdisk-loop" }
+gadgetdisk-proto = { path = "crates/gadgetdisk-proto" }
+gadgetdisk-usb = { path = "crates/gadgetdisk-usb" }
+
+[workspace.lints.clippy]
+allow_attributes_without_reason = "deny"
+cast_possible_truncation = "deny"
+cast_sign_loss = "deny"
+dbg_macro = "deny"
+undocumented_unsafe_blocks = "deny"
+todo = "deny"
+unimplemented = "deny"
+
+
+[profile.release]
+opt-level = "z"
+strip = true
+lto = true
+panic = "abort"
+codegen-units = 1

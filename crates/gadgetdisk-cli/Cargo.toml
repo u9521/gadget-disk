@@ -1,0 +1,31 @@
+[package]
+name = "gadgetdisk-cli"
+description = "gadgetdisk：一次性 CLI（镜像管理、loop 挂载、REST 后端、gdd 拉起与状态持有）"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[lib]
+name = "gadgetdisk_cli"
+path = "src/lib.rs"
+
+[[bin]]
+name = "gadgetdisk"
+path = "src/main.rs"
+
+[dependencies]
+gadgetdisk-core.workspace = true
+gadgetdisk-gdd.workspace = true
+gadgetdisk-loop.workspace = true
+gadgetdisk-proto.workspace = true
+gadgetdisk-usb.workspace = true
+clap.workspace = true
+libc.workspace = true
+rustix.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+
+[lints]
+workspace = true

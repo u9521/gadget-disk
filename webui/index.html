@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>GadgetDisk</title>
+<!-- 零构建：不引用任何外部 CDN 资源（模块须离线可用） -->
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header>
+  <h1>GadgetDisk</h1>
+  <p class="subtitle" id="status-line">正在连接后端…</p>
+</header>
+
+<nav class="tabs" role="tablist" aria-label="视图">
+  <button role="tab" id="tab-mount" aria-controls="panel-mount" aria-selected="true">挂载状态</button>
+  <button role="tab" id="tab-create" aria-controls="panel-create" aria-selected="false">创建镜像</button>
+  <button role="tab" id="tab-import" aria-controls="panel-import" aria-selected="false">上传/导入</button>
+  <button role="tab" id="tab-images" aria-controls="panel-images" aria-selected="false">镜像管理</button>
+  <button role="tab" id="tab-edit" aria-controls="panel-edit" aria-selected="false">本地编辑</button>
+  <button role="tab" id="tab-settings" aria-controls="panel-settings" aria-selected="false">设置与诊断</button>
+</nav>
+
+<main>
+
+<!-- 后端不可用横幅：**持久**显示，直到恢复为止（不自动隐藏）。
+     与 #error-panel 的分工：错误面板是「单次操作失败」，下次成功即清除；
+     本横幅是「通道不可用」，只有后端恢复才消失。两者可以同时可见。 -->
+<div id="offline-banner" class="panel offline" role="alert" hidden>
+  <strong>后端服务未响应 — 操作已暂停</strong>
+  <div id="offline-reason">正在检查后端服务状态…</div>
+  <pre id="offline-detail" hidden></pre>
+  <div class="row" style="margin-top:8px">
+    <button class="action" id="btn-reconnect">重连</button>
+    <span id="offline-retrying" class="muted" role="status" hidden>正在重试…</span>
+  </div>
+  <div class="hint">
+    只读刷新操作仍可正常执行，探测成功后将自动恢复写操作按钮。
+  </div>
+</div>
+
+<!-- 全局错误区：任何视图的失败都显示在这里，保证「错误有可见提示」 -->
+<div id="error-panel" class="panel error" hidden>
+  <strong id="error-title">操作发生错误</strong>
+  <div id="error-message"></div>
+  <pre id="error-detail" hidden></pre>
+</div>
+
+<!-- 1. 挂载状态 -->
+<section role="tabpanel" id="panel-mount" class="active" aria-labelledby="tab-mount">
+  <h2>挂载状态</h2>
+
+  <div class="card">
+    <h3>USB 控制器</h3>
+    <dl class="kv">
+      <dt>UDC</dt><dd id="mount-udc">—</dd>
+      <dt>状态</dt><dd id="mount-effective">—</dd>
+    </dl>
+  </div>
+
+  <div class="card">
+    <h3>设备</h3>
+    <div id="mount-devices" class="empty">尚未挂载任何设备。</div>
+  </div>
+
+  <div class="card">
+    <h3>挂载镜像</h3>
+
+    <!-- 上次导出未兑现：设备被拔出后 gdd 已清理，而意图还留着。 -->
+    <div id="pending-intent" class="hint warn" hidden>
+      <strong>上次导出未生效</strong>
+      <div id="pending-intent-detail"></div>
+      <div class="row" style="margin-top:8px">
+        <button class="action" id="btn-resume-intent" data-role="mutation">恢复上次挂载</button>
+        <button class="action" id="btn-clear-intent" data-role="mutation">清除记录</button>
+      </div>
+    </div>
+
+    <p class="muted" style="margin-top:0">
+      每个 LUN 代表一个<strong>槽位</strong>，对应电脑上的一块独立磁盘或光驱。
+      镜像只能从模块的镜像目录中选择。修改已挂载槽位仅会重新配置介质（系统会先强制弹出
+      该介质），不会断开 USB；新增槽位会短暂断开并重新连接 USB。
+    </p>
+
+    <div id="mount-device-rows"></div>
+
+    <div class="row tight" style="margin-top:8px">
+      <button class="action" id="btn-add-device">添加空闲槽位</button>
+      <span class="muted" id="mount-device-count"></span>
+    </div>
+
+    <div id="mount-mode-warning" class="hint" hidden></div>
+
+    <div class="row" style="margin-top:12px">
+      <button class="action primary" id="btn-mount" data-role="mutation">挂载 / 应用</button>
+      <button class="action" id="btn-unmount" data-role="mutation">全部卸载</button>
+      <button class="action" id="btn-refresh-mount">刷新</button>
+    </div>
+    <div id="mount-task-status" class="task-status" role="status" aria-live="polite"></div>
+
+    <div class="hint">
+      <strong>弹出</strong>仅使该槽位变空闲（保留镜像、模式及 INQUIRY 设备标识），随时可
+      修改参数再重新挂载；<strong>删除槽位</strong>才会让该序号消失（<code>lun.0</code>
+      只能弹出不能删除）；<strong>全部卸载</strong>将移除所有 USB
+      功能配置并完全释放设备。
+    </div>
+  </div>
+</section>
+
+<!-- 2. 创建镜像 -->
+<section role="tabpanel" id="panel-create" aria-labelledby="tab-create">
+  <h2>创建镜像</h2>
+
+  <div class="card">
+    <label for="create-name">文件名</label>
+    <input type="text" id="create-name" value="disk.img" autocomplete="off">
+    <div class="error" id="create-name-conflict" style="display:none"></div>
+
+    <label for="create-size">容量</label>
+    <input type="text" id="create-size" value="4G" autocomplete="off">
+    <div class="muted" id="create-size-note">支持输入 64M、1G、4G 等容量格式（单位不区分大小写）。</div>
+
+    <label for="create-layout">布局</label>
+    <select id="create-layout">
+      <option value="gpt">GPT 分区表（推荐）</option>
+      <option value="mbr">MBR 分区表（4 个主分区，或 3 主 + 1 个扩展分区容器）</option>
+      <option value="raw">无分区表（整盘一个卷）</option>
+    </select>
+
+    <label for="create-filesystem">文件系统</label>
+    <select id="create-filesystem">
+      <option value="fat32">FAT32（兼容性最好）</option>
+      <option value="exfat">exFAT（大文件友好）</option>
+      <option value="ext4">ext4（Linux 原生）</option>
+    </select>
+    <div class="muted" id="create-fs-source">正在探测格式化工具…</div>
+
+    <label for="create-label">卷标</label>
+    <input type="text" id="create-label" value="GADGETDISK" maxlength="11" autocomplete="off">
+
+    <!--
+      分区编辑器：仅 gpt / mbr 布局显示（raw 没有分区表）。
+      显隐由视图模块按 layoutSupportsPartitions 控制。
+    -->
+    <div id="create-partitions-section" style="display:none">
+      <label>分区</label>
+      <div class="muted" id="create-partitions-note"></div>
+      <div id="create-partitions"></div>
+      <div class="row" style="margin-top:8px">
+        <button class="action" id="btn-add-partition" type="button">添加分区</button>
+      </div>
+    </div>
+
+    <div class="row" style="margin-top:12px">
+      <button class="action primary" id="btn-create" data-role="mutation">创建镜像</button>
+    </div>
+    <div id="create-task-status" class="task-status" role="status" aria-live="polite"></div>
+
+    <div id="create-avail" class="muted" style="margin-top:10px">正在查询可用空间…</div>
+    <div class="hint" id="create-hint">
+      镜像以稀疏文件创建，创建大容量镜像不会立即占满存储空间。
+      分区起点统一对齐到 1 MiB。容量填 0 表示该分区占满剩余空间。
+    </div>
+  </div>
+</section>
+
+<!-- 3. 上传/导入 -->
+<section role="tabpanel" id="panel-import" aria-labelledby="tab-import">
+  <h2>上传 / 导入镜像</h2>
+
+  <div class="card">
+    <h3>选择镜像文件</h3>
+    <p class="muted" style="margin-top:0">
+      点击下面的按钮会打开<strong>系统的文件选择器</strong>。选中的文件由页面上传给设备侧后端，写入模块的镜像目录。
+    </p>
+
+    <input type="file" id="import-file" accept="*/*">
+
+    <label for="import-dest" style="margin-top:12px">目标文件名</label>
+    <input type="text" id="import-dest" placeholder="imported.img" autocomplete="off">
+
+    <div class="row" style="margin-top:10px">
+      <button class="action primary" id="btn-import" data-role="mutation" disabled>上传并导入</button>
+    </div>
+    <div class="muted" id="import-selected">未选择文件。</div>
+    <div id="import-task-status" class="task-status" role="status" aria-live="polite"></div>
+  </div>
+
+  <div class="card" id="job-card" hidden>
+    <h3>导入进度</h3>
+    <div class="progress"><span id="job-bar"></span></div>
+    <div class="muted" id="job-text">—</div>
+  </div>
+</section>
+
+<!-- 4. 镜像管理 -->
+<section role="tabpanel" id="panel-images" aria-labelledby="tab-images">
+  <h2>镜像管理</h2>
+  <div class="card">
+    <div class="row">
+      <button class="action" id="btn-images-refresh">刷新列表</button>
+    </div>
+    <div id="images-task-status" class="task-status" role="status" aria-live="polite"></div>
+    <ul class="list" id="images-list"></ul>
+    <div class="empty" id="images-empty">尚未创建任何镜像。</div>
+  </div>
+</section>
+
+<!-- 5. 本地编辑挂载 -->
+<section role="tabpanel" id="panel-edit" aria-labelledby="tab-edit">
+  <h2>本地编辑挂载</h2>
+
+  <div class="card">
+    <h3>已挂载列表</h3>
+    <ul class="list" id="loop-list"></ul>
+    <div class="empty" id="loop-empty">当前无活跃本地挂载。</div>
+    <div class="row" style="margin-top:10px">
+      <button class="action" id="btn-loop-refresh">刷新</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>挂载到本地</h3>
+    <label for="loop-image">镜像</label>
+    <div class="row tight">
+      <select id="loop-image"></select>
+      <button class="action" id="btn-loop-image-refresh" style="flex:0 0 auto">刷新列表</button>
+    </div>
+    <div class="muted" id="loop-image-note">
+      只能选择模块镜像目录中的镜像；新镜像请在「创建镜像」或「上传/导入」中生成。
+    </div>
+
+    <label for="loop-partition-select">挂载分区</label>
+    <div class="row tight">
+      <select id="loop-partition-select">
+        <option value="">整盘（无分区表）</option>
+      </select>
+      <button class="action" id="btn-loop-partitions" style="flex:0 0 auto">读取分区</button>
+    </div>
+    <div class="muted" id="loop-partition-note">
+      镜像有分区表时可选择要挂载的分区；无分区表则按整盘挂载。
+    </div>
+
+    <div class="row tight" style="margin-top:8px">
+      <label style="flex:0 0 auto;margin:0">
+        <input type="checkbox" id="loop-readonly"> 只读挂载（防止意外写入与数据变更）
+      </label>
+    </div>
+
+    <div class="row" style="margin-top:12px">
+      <button class="action primary" id="btn-loop-attach" data-role="mutation">挂载到本地</button>
+      <button class="action" id="btn-loop-detach" data-role="mutation">卸载本地镜像</button>
+    </div>
+    <div id="loop-task-status" class="task-status" role="status" aria-live="polite"></div>
+    <!-- 挂载前的 SELinux 标签修正提示：标签改不动时挂载可能仍然「成功」但内核
+         读不到内容，必须把这个后果当面说清楚，而不是静默继续。 -->
+    <div id="loop-context-note" class="hint warn" hidden></div>
+
+    <div class="hint warn">
+      挂载到本地前必须先卸载 USB
+    </div>
+    <div class="hint">
+      挂载点位于 <code>/data/adb/gadget-disk/mnt/</code>建议使用支持 root 权限的文件管理器访问。
+    </div>
+    <div id="loop-capability" class="muted"></div>
+  </div>
+</section>
+
+<!-- 6. 设置与诊断 -->
+<section role="tabpanel" id="panel-settings" aria-labelledby="tab-settings">
+  <h2>设置与诊断</h2>
+
+  <div class="card">
+    <h3>USB 设备身份</h3>
+    <p class="muted">
+      保存后新设备身份需待电脑<strong>重新枚举</strong>后生效，
+      USB断开连接后系统 init 会重置 VID/PID的配置，所以请在断开USB连接的情况下保存。
+    </p>
+
+    <label for="cfg-vid">VID（厂商标识，十六进制，如 18d1）</label>
+    <input type="text" id="cfg-vid" placeholder="18d1" autocomplete="off" inputmode="text">
+    <div class="muted">
+      Vendor ID，USB 设备厂商编号，范围 <code>0x0000</code>–<code>0xffff</code>。
+    </div>
+
+    <label for="cfg-pid">PID（产品标识，十六进制，如 4ee7）</label>
+    <input type="text" id="cfg-pid" placeholder="4ee7" autocomplete="off" inputmode="text">
+    <div class="muted">
+      Product ID，由厂商分配的产品编号，范围 <code>0x0000</code>–<code>0xffff</code>。
+    </div>
+
+    <label for="cfg-manufacturer">制造商</label>
+    <input type="text" id="cfg-manufacturer" placeholder="GadgetDisk" autocomplete="off" maxlength="126">
+
+    <label for="cfg-product">产品名</label>
+    <input type="text" id="cfg-product" placeholder="GadgetDisk Storage" autocomplete="off" maxlength="126">
+
+    <label for="cfg-serial">序列号</label>
+    <input type="text" id="cfg-serial" placeholder="0123456789ABCDEF" autocomplete="off" maxlength="126">
+
+    <div class="row" style="margin-top:12px">
+      <button class="action primary" id="btn-config-save" data-role="mutation">保存身份</button>
+      <button class="action" id="btn-config-load">读取当前</button>
+    </div>
+    <div id="config-task-status" class="task-status" role="status" aria-live="polite"></div>
+  </div>
+
+  <div class="card">
+    <h3>镜像安全上下文</h3>
+    <p class="muted">
+      模块会在<strong>挂载或格式化之前</strong>将 <code>images/</code> 下的镜像修正为
+      此处配置的目标标签。默认值为<code>media_rw_data_file</code>
+      修改标签将在<strong>下一次挂载才生效</strong>
+    </p>
+
+    <label for="cfg-image-context">镜像文件 SELinux 上下文</label>
+    <input type="text" id="cfg-image-context" placeholder="u:object_r:media_rw_data_file:s0" autocomplete="off">
+    <div class="muted" id="cfg-image-context-note">
+      形如 <code>u:object_r:&lt;类型&gt;:s0</code>
+    </div>
+
+    <div class="row" style="margin-top:12px">
+      <button class="action primary" id="btn-image-context-save" data-role="mutation">保存镜像标签</button>
+      <button class="action" id="btn-image-context-reset" data-role="mutation">恢复默认</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>默认设备模式</h3>
+    <select id="settings-mode">
+      <option value="rw">可读写</option>
+      <option value="ro">只读</option>
+      <option value="cdrom">光驱</option>
+    </select>
+    <div class="muted" style="margin-top:6px">
+      仅作为界面的默认值保存于本机；磁盘与挂载状态一律以后端为准。
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>能力探测</h3>
+    <dl class="kv" id="caps-list">
+      <dt>状态</dt><dd>正在探测…</dd>
+    </dl>
+    <div class="row" style="margin-top:10px">
+      <button class="action" id="btn-caps-refresh">重新探测</button>
+    </div>
+    <div id="settings-task-status" class="task-status" role="status" aria-live="polite"></div>
+  </div>
+
+  <div class="card">
+    <h3>关于</h3>
+    <dl class="kv">
+      <dt>模块</dt><dd>GadgetDisk</dd>
+      <dt>后端</dt><dd id="diag-moddir">—</dd>
+      <dt>数据目录</dt><dd>/data/adb/gadget-disk/</dd>
+    </dl>
+  </div>
+</section>
+
+</main>
+
+<script type="module" src="main.js"></script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+[package]
+name = "gadgetdisk-proto"
+description = "gdd 与 client 之间的消息编解码、版本握手与帧读写"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+
+[lints]
+workspace = true

@@ -1,0 +1,19 @@
+[package]
+name = "gadgetdisk-core"
+description = "镜像创建（GPT/MBR/FAT32）、容量与对齐计算、分区偏移"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+gpt.workspace = true
+uuid.workspace = true
+fatfs.workspace = true
+fscommon.workspace = true
+libc.workspace = true
+rustix.workspace = true
+thiserror.workspace = true
+
+[lints]
+workspace = true

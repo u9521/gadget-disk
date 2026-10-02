@@ -1,0 +1,27 @@
+[package]
+name = "gadgetdisk-gdd"
+description = "gdd：无状态的 mass_storage 执行进程（仅导出期间存在的按需 UDS 服务）"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[lib]
+name = "gadgetdisk_gdd"
+path = "src/lib.rs"
+
+[[bin]]
+name = "gdd"
+path = "src/main.rs"
+
+[dependencies]
+gadgetdisk-proto.workspace = true
+gadgetdisk-usb.workspace = true
+clap.workspace = true
+libc.workspace = true
+rustix.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+
+[lints]
+workspace = true

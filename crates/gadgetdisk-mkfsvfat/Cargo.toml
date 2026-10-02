@@ -1,0 +1,27 @@
+[package]
+name = "gadgetdisk-mkfsvfat"
+description = "mkfs.vfat：把 GadgetDisk 内置的 FAT32 格式化能力做成独立二进制（命令行对齐 dosfstools）"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[lib]
+name = "gadgetdisk_mkfsvfat"
+path = "src/lib.rs"
+
+[[bin]]
+# Cargo 不允许二进制名含 `.`，因此这里叫 `mkfsvfat`；
+# 打包阶段（scripts/build/cli.py）会重命名为 `mkfs.vfat`，与 dosfstools 一致。
+name = "mkfsvfat"
+path = "src/main.rs"
+
+[dependencies]
+fatfs.workspace = true
+fscommon.workspace = true
+clap.workspace = true
+# 仅用于块设备容量查询（ioctl BLKGETSIZE64）。
+libc.workspace = true
+
+[lints]
+workspace = true
