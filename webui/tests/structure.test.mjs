@@ -14,7 +14,7 @@
 //
 // 不变量与理由见 docs/webui.md「前端模块拆分」。
 //
-//   node --test tests/structure.test.mjs
+//   uv run gd-test --all
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';

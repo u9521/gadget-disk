@@ -32,7 +32,8 @@ webui/
 
 `pure/` 与其余模块的分工是**可测试性要求**而非风格偏好：零构建约束下没有前端
 测试框架，只有把可测逻辑做成**不接触 DOM/window 的纯函数**，才能用 Node 内置
-test runner 覆盖（在 `webui/` 下执行 `node --test tests/`）。视图模块只做 DOM 绑定
+test runner 覆盖（`uv run gd-test --all`；它由 Python 枚举 `webui/tests/*.test.mjs`
+后把**显式文件路径**交给 `node --test`）。视图模块只做 DOM 绑定
 与后端调用，不得混入可测逻辑。
 
 **零构建约束**：不使用 npm、打包器或前端框架；不引用任何外部 CDN 资源（模块须离线可用）。

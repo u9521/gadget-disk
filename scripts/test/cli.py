@@ -23,6 +23,7 @@ import sys
 from scripts.lib.common import (
     REPO_ROOT,
     WEBUI_DIR,
+    WEBUI_TESTS_DIR,
     BuildError,
     cargo_env,
     run,
@@ -190,6 +191,42 @@ def affects_webui(files: list[str]) -> bool:
     return any(name.startswith(WEBUI_PREFIXES) for name in files)
 
 
+#: WebUI 测试文件名模式（Node 默认只把 `*.test.*js` 之类视为测试文件）。
+WEBUI_TEST_GLOB = "*.test.mjs"
+
+
+def webui_test_files() -> list[str]:
+    """列出 `webui/tests/` 下的测试文件（相对 `webui/` 的路径）。
+
+    **为什么由 Python 枚举、而不是把目录或 glob 交给 node**：
+
+    `node --test tests/`（目录形式）在 **Node 22 与 24 上都失败**——它会把
+    目录当模块去 `require`，报 `Cannot find module .../webui/tests`；只有
+    Node 26 起才容忍目录参数。本仓库的 CI 钉的就是 Node 24，于是出现
+    「本地（26）全绿、CI 红」的假象。
+
+    改用 `--test 'tests/**/*.test.mjs'` 或裸 `--test` 虽然跨版本可用，但
+    **在零匹配时静默 `exit 0`**——测试文件被误删或改名时会得到一次"绿色"的
+    空跑。本仓库明确反对这种静默通过（见 `docs/testing.md` 的测试纪律），
+    因此这里显式枚举文件：零匹配直接报错。
+    """
+    if not WEBUI_TESTS_DIR.is_dir():
+        raise BuildError(f"missing the WebUI test directory: {WEBUI_TESTS_DIR.name}/")
+
+    files = sorted(
+        str(path.relative_to(WEBUI_DIR))
+        for path in WEBUI_TESTS_DIR.glob(WEBUI_TEST_GLOB)
+        if path.is_file()
+    )
+    if not files:
+        raise BuildError(
+            f"no WebUI test files matching {WEBUI_TEST_GLOB} under "
+            f"{WEBUI_DIR.name}/{WEBUI_TESTS_DIR.name}/. "
+            "Refusing to report a green run with zero tests."
+        )
+    return files
+
+
 def run_webui_tests(dry_run: bool) -> int:
     """运行 WebUI 的 Node 原生测试。"""
     if shutil.which("node") is None:
@@ -200,7 +237,15 @@ def run_webui_tests(dry_run: bool) -> int:
         )
         return 0
 
-    command = ["node", "--test", "tests/"]
+    try:
+        files = webui_test_files()
+    except BuildError as exc:
+        print(f"\n{exc}", file=sys.stderr)
+        return 1
+
+    # 传**显式文件路径**（见 `webui_test_files` 的说明：目录形式在新版 Node 上会失败，
+    # 而 glob/无参数形式在零匹配时会静默通过）。
+    command = ["node", "--test", *files]
     if dry_run:
         print("\nwill run:")
         print(f"  (in {WEBUI_DIR.name}/) " + " ".join(command))

@@ -1,14 +1,3 @@
-# CI：门禁与发版。
-#
-# 契约见 docs/build-and-release.md「持续集成」；本文件不重复定义任何规则，
-# 只负责在 GitHub 上以**和本地完全相同的入口**重跑一遍：
-#
-#   uv run gd-check      格式、静态检查与治理门禁
-#   uv run gd-test --all 全量 Rust + WebUI 测试
-#   cargo check --target 两个 Android 目标的跨目标静态检查（不需要 NDK）
-#
-# 所有第三方 action 一律按 **commit SHA** 引用（标签可被上游移动），
-# 末尾注释写明对应版本；升级方式见 docs/build-and-release.md。
 name: CI
 
 on:
@@ -18,17 +7,14 @@ on:
   pull_request:
   workflow_dispatch:
 
-# 顶层最小权限；只有 release job 需要提升。
 permissions:
   contents: read
 
-# 同一 ref 的新推送取消旧的运行（tag 运行不取消，避免打断发版）。
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/v') }}
 
 env:
-  # 与 requires-python >=3.11 一致；显式指定避免 runner 默认解释器漂移。
   UV_PYTHON: "3.12"
   CARGO_TERM_COLOR: always
 
@@ -41,21 +27,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      # 必须显式安装：runner 自带的 Rust 低于仓库 MSRV（rust-version = "1.99"），
-      # 裸跑会因为版本不足直接失败。钉 1.99.0 让 MSRV 声明成为可执行的断言。
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@70dec6087f2cb6bab9fbac4da23160afbe848e91 # 1.99.0
         with:
           toolchain: 1.99.0
           components: rustfmt, clippy
-          # Android target 供跨目标静态检查使用（cargo check 不需要 NDK linker）。
           targets: aarch64-linux-android, x86_64-linux-android
 
       - name: Cache cargo artifacts
         uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
 
-      # nextest 缺失时 gd-test 会回退 cargo test，但会失去 -E 过滤能力；
-      # 用官方 action 装预编译二进制（避免 cargo install 拉入 aws-lc-sys）。
       - name: Install cargo-nextest
         uses: taiki-e/install-action@f7e5d7c961414b23f5b25b2da9294395d08513ad # v2.87.26
         with:
@@ -67,14 +48,11 @@ jobs:
           version: "0.11.13"
           enable-cache: true
 
-      # 必须在 gd-check 之前：pyright 未随附 nodejs wheel 时会回退到全局 node。
       - name: Install Node.js
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "24"
 
-      # `--locked`（不是 `--frozen`）：前者在锁文件过期时**非零退出**，
-      # 后者只警告并继续。CI 要的是「依赖锁定不可漂移」这条硬约束。
       - name: Sync Python dependencies
         run: uv sync --locked
 
@@ -98,6 +76,9 @@ jobs:
 
       - name: Format, lint and governance gates
         run: uv run gd-check
+
+      - name: Build binaries required by tests
+        run: cargo build --workspace --bins
 
       - name: Full test suite
         run: uv run gd-test --all

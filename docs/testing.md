@@ -103,6 +103,13 @@ uv run gd-check --fix    # 应用自动修复
 
 在改动命中 `webui/` 时由测试脚本自动调度；缺失 `node` 时输出告警并跳过。
 
+**调用形式**：由 `scripts/test/cli.py` 枚举 `webui/tests/*.test.mjs`，把**显式文件路径**
+交给 `node --test`。不要改回目录形式（`node --test tests/`）：它在 **Node 22 与 24 上
+会把目录当模块 `require`**，报 `Cannot find module .../webui/tests` 并失败，只有 Node 26+
+才容忍目录参数——而 CI 钉的是 Node 24，症状是「本地全绿、CI 红」。也不要改用
+`--test 'tests/**/*.test.mjs'` 或裸 `--test`：两者在**零匹配时静默 `exit 0`**，
+测试文件被误删或改名会得到一次绿色的空跑；上述枚举方式则直接报错。
+
 **测试覆盖矩阵**
 
 | 测试文件 | 覆盖内容 |

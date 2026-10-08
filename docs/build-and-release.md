@@ -505,12 +505,18 @@ updating, or pending removal`），`WebUIActivity` 在 `onLaunchFailed()` 里 `f
 | 6 | `actions/setup-node` | 必须在 `gd-check` **之前**：`pyright` 未随附 nodejs wheel 时回退到全局 `node` |
 | 7 | `uv sync --locked` | 锁文件过期即**非零退出**（`--frozen` 只警告，故不用于 CI） |
 | 8 | `uv run gd-check` | 格式 + 静态检查 + 治理门禁（与本地同一入口） |
-| 9 | `uv run gd-test --all` | 全量 Rust + WebUI 测试 |
-| 10 | `cargo check --workspace --all-targets --target <t>` | 两个 Android target 各一次 |
+| 9 | `cargo build --workspace --bins` | **必须在测试之前**：`nextest` 只构建 test target，而 `gadgetdisk-cli` 的 `loop_adapter` 测试要**执行** `target/<profile>/mkfsvfat`（刻意走真实子进程调用链），缺它会让 5 个用例失败 |
+| 10 | `uv run gd-test --all` | 全量 Rust + WebUI 测试 |
+| 11 | `cargo check --workspace --all-targets --target <t>` | 两个 Android target 各一次 |
 
-第 10 步对应的正是「跨目标编译已知问题」要求手动执行的那两条命令（见上）。它**只做类型
+第 11 步对应的正是「跨目标编译已知问题」要求手动执行的那两条命令（见上）。它**只做类型
 检查，因此不需要 NDK**——实测在清空 `ANDROID_HOME` / `ANDROID_NDK_HOME` 后两个目标均能
 `Finished`。这一步填的是 `gd-check` 只跑宿主 target 留下的盲区。
+
+> 第 9 步的缺口**只在干净检出上暴露**：开发机常因早先手工构建过而残留 `mkfsvfat`，
+> 本地因此长期显示全绿，而 CI 总是从空 `target/` 开始。本地干净检出上直接跑
+> `cargo nextest run -p gadgetdisk-cli` 若报 `bundled mkfsvfat binary not found`，
+> 先执行一次 `cargo build --workspace --bins` 即可。
 
 CI 里**不写任何宿主绝对路径**，NDK 沿用 runner 镜像自带的版本；每次运行会把 `rustc -Vv`、
 `uv`/`node` 版本与 NDK 的 `source.properties` 写进 job summary，便于追溯产物来源。

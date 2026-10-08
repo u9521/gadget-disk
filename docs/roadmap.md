@@ -66,7 +66,7 @@
 | 27 | 33–48 MiB 的**裸 FAT32**（`raw` 布局）在 Linux 上被判为 `vfat` 而非 `vfat32` | 影响 Host 端文件系统类型显示与个别工具的自动挂载决策，不影响读写 | `MKFS.FAT` 判「无分区表」看 `st_size <= 0xFFFFFFFF`，内核/`libblkid` 看簇数 ≥65525——两者判据不同。在 Linux 上对 33 MiB 的 `raw` 镜像执行 `blkid`、`file -s` 并挂载核对；Windows/macOS 行为未验证 |
 | 28 | exFAT 的**单分区下限为 1 MiB** | 决定 exFAT 分区的最小可创建容量（当前值是保守猜测） | 宿主没有 `mkfs.exfat`，无法离线实测；在 AVD/真机上对 1 MiB、2 MiB、8 MiB 分区各执行一次 `mkfs.exfat`，记录实际下限并回填常量 |
 | 29 | APatch 同样向 `customize.sh` 导出 `$ARCH` / `$IS64BIT` | 决定安装脚本能否去掉 `getprop`/`uname` 兜底。不成立时表现为安装期明确 abort（不会静默装错架构） | 在 APatch 环境安装模块并观察 `ARCH` 取值；KernelSU（`installer.sh`）与 Magisk（`util_functions.sh`）已由源码确认 |
-| 30 | CI 的两个 job 在 GitHub 侧可正常跑通 | 首次推送才能确认；失败表现为该 job 红 | 本机无 `act`，仅校验了 YAML 结构与各 action 的输入名。推送一次并观察 Actions 日志 |
+| 30 | CI 的两个 job 在 GitHub 侧可正常跑通 | 首次推送才能确认；失败表现为该 job 红 | 本机无 `act`，仅校验了 YAML 与各 action 输入名。**首次运行已暴露两个既有缺陷**（`nextest` 不构建测试所依赖的 `mkfsvfat` 二进制；WebUI 测试的 `node --test tests/` 目录形式在 Node ≤24 上失败），均已修复；其余步骤仍待复核 |
 | 31 | runner 镜像自带的 NDK 能编出与本地 NDK 同样可用的二进制 | 只影响「产物完全可复现」的强度，不影响正确性 | 本机 NDK 为 29.0.14206865，runner 默认 27.3.13750724；比对两次构建的 ZIP 内容与设备端行为 |
 | 32 | `versionCode = git rev-list --count HEAD` 在历史被 squash/rebase 后会**回退** | KernelSU 要求 versionCode 递增，回退可能导致管理器拒绝更新 | 改写历史后重新发版并观察管理器行为；当前 `module.prop` 缺省值与 commit 数恰好一致（均为 1），属巧合而非保证 |
 

@@ -2,7 +2,7 @@
 //
 // 零构建约束下没有前端测试框架（docs/testing.md），故用 Node 内置 test runner：
 //
-//   node --test tests/webui/
+//   uv run gd-test --all
 //
 // 只测纯函数，不涉及 DOM。
 
